@@ -14,6 +14,8 @@
 #include <thread>
 #include <vector>
 
+#include <lo/lo.h>
+
 // command-line parameters
 struct whisper_params {
     int32_t n_threads  = std::min(4, (int32_t) std::thread::hardware_concurrency());
@@ -116,6 +118,9 @@ void whisper_print_usage(int /*argc*/, char ** argv, const whisper_params & para
 }
 
 int main(int argc, char ** argv) {
+
+    lo_address t = lo_address_new("255.255.255.255", "9010");
+
     whisper_params params;
 
     if (whisper_params_parse(argc, argv, params) == false) {
@@ -354,8 +359,10 @@ int main(int argc, char ** argv) {
                 }
 
                 const int n_segments = whisper_full_n_segments(ctx);
+                std::string foo;
                 for (int i = 0; i < n_segments; ++i) {
                     const char * text = whisper_full_get_segment_text(ctx, i);
+                    foo += text;
 
                     if (params.no_timestamps) {
                         printf("%s", text);
@@ -384,6 +391,11 @@ int main(int argc, char ** argv) {
                         }
                     }
                 }
+
+                if (lo_send(t, "/whisper", "s", foo.c_str()) == -1) {
+                    printf("OSC error %d: %s\n", lo_address_errno(t), lo_address_errstr(t));
+                }
+
 
                 if (params.fname_out.length() > 0) {
                     fout << std::endl;
